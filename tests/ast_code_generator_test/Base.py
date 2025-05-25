@@ -1,39 +1,11 @@
 from __future__ import absolute_import
 from __future__ import print_function
-import os
 import sys
-
+import os
 import pyverilog.vparser.ast as vast
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
 
-expected = """\
-
-module top #
-(
-  parameter DATAWID = 32
-)
-(
-  input CLK,
-  input RST,
-  output [7:0] led
-);
-
-  reg [DATAWID-1:0] count;
-  assign led = count[DATAWID-1:DATAWID-8];
-
-  always @(posedge CLK) begin
-    if(RST) begin
-      count <= 0;
-    end else begin
-      count <= (count + 1) * 2 + 1;
-    end
-  end
-
-
-endmodule
-"""
-
-def test():
+def main():
     datawid = vast.Parameter( 'DATAWID', vast.Rvalue(vast.IntConst('32')) )
     params = vast.Paramlist( [datawid] )
     clk = vast.Ioport( vast.Input('CLK') )
@@ -61,13 +33,11 @@ def test():
         vast.Rvalue(vast.IntConst('0')))
     if0_true = vast.Block([ assign_count_true ])
 
-    # (count + 1) * 2
+    # count + 1
     count_plus_1 = vast.Plus(vast.Identifier('count'), vast.IntConst('1'))
-    cp1_times_2 = vast.Times(count_plus_1, vast.IntConst('2'))
-    cp1t2_plus_1 = vast.Plus(cp1_times_2, vast.IntConst('1'))
     assign_count_false = vast.NonblockingSubstitution(
         vast.Lvalue(vast.Identifier('count')),
-        vast.Rvalue(cp1t2_plus_1))
+        vast.Rvalue(count_plus_1))
     if0_false = vast.Block([ assign_count_false ])
 
     if0 = vast.IfStatement(vast.Identifier('RST'), if0_true, if0_false)
@@ -84,9 +54,7 @@ def test():
     
     codegen = ASTCodeGenerator()
     rslt = codegen.visit(ast)
-    with open("output4.v", "w") as f:
-          f.write(rslt)    
-    # assert(expected == rslt)
-
+    with open("output.v", "w") as f:
+            f.write(rslt)
 if __name__ == '__main__':
-    test()
+    main()
